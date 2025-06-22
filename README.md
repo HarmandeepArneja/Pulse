@@ -149,11 +149,3 @@ The predictive burnout score (0-100) is calculated using:
 3. Make your changes
 4. Add tests if applicable
 5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 🆘 Support
-
-For support, email support@pulse-app.com or create an issue in this repository. 
