@@ -1,0 +1,54 @@
+{
+  "name": "pulse",
+  "version": "1.0.0",
+  "description": "Burnout detection and prevention platform for distributed teams",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "slack-app"
+  ],
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:slack\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:slack": "cd slack-app && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ../slack-app && npm install",
+    "db:setup": "npx prisma generate && npx prisma db push && npx prisma db seed",
+    "db:reset": "npx prisma db push --force-reset && npx prisma db seed",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.0",
+    "prisma": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "burnout",
+    "wellness",
+    "slack",
+    "mental-health",
+    "team-management",
+    "analytics"
+  ],
+  "author": "Pulse Team",
+  "license": "MIT"
+} 

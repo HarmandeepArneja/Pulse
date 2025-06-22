@@ -1,0 +1,322 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  firstName     String
+  lastName      String
+  avatar        String?
+  role          UserRole @default(EMPLOYEE)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Slack integration
+  slackUserId   String?  @unique
+  slackTeamId   String?
+  
+  // Relationships
+  teamId        String?
+  team          Team?    @relation("TeamMembers", fields: [teamId], references: [id])
+  managerId     String?
+  manager       User?    @relation("UserManager", fields: [managerId], references: [id])
+  directReports User[]   @relation("UserManager")
+  
+  // Team management
+  managedTeams  Team[]   @relation("TeamManager")
+  
+  // Check-ins and data
+  checkIns      CheckIn[]
+  afterHoursActivity AfterHoursActivity[]
+  recoveryScores RecoveryScore[]
+  
+  // Burnout risks
+  burnoutRisks  BurnoutRisk[]
+  
+  // Email digests
+  emailDigests  EmailDigest[]
+  
+  // Notifications
+  notifications Notification[]
+  
+  // Auth
+  clerkId       String?  @unique
+  
+  @@map("users")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  members        User[]       @relation("TeamMembers")
+  managerId      String?
+  manager        User?        @relation("TeamManager", fields: [managerId], references: [id])
+  
+  // Burnout risks
+  burnoutRisks  BurnoutRisk[]
+
+  @@map("teams")
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  teams       Team[]
+  settings    OrganizationSettings?
+  
+  // Slack integrations
+  slackIntegrations SlackIntegration[]
+
+  @@map("organizations")
+}
+
+model OrganizationSettings {
+  id              String   @id @default(cuid())
+  organizationId  String   @unique
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  
+  // Check-in settings
+  checkInEnabled  Boolean  @default(true)
+  checkInTime     String   @default("09:00") // HH:MM format
+  checkInDays     String[] @default(["monday", "tuesday", "wednesday", "thursday", "friday"])
+  
+  // Privacy settings
+  anonymizationEnabled Boolean @default(true)
+  dataRetentionDays    Int     @default(365)
+  
+  // Notification settings
+  emailNotificationsEnabled Boolean @default(true)
+  slackNotificationsEnabled Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organization_settings")
+}
+
+model CheckIn {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Mood and wellness data
+  moodScore   Int      // 1-10 scale
+  energyLevel Int?     // 1-10 scale
+  stressLevel Int?     // 1-10 scale
+  workloadLevel Int?   // 1-10 scale
+  
+  // Optional text response
+  reflection  String?
+  sentiment   String?  // AI-analyzed sentiment
+  
+  // Metadata
+  submittedAt DateTime @default(now())
+  submittedVia String  @default("slack") // slack, web, mobile
+  
+  // Anonymization
+  isAnonymized Boolean @default(false)
+  anonymizedId String?
+
+  @@map("check_ins")
+}
+
+model AfterHoursActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Activity data
+  activityType String  // slack_message, calendar_event, login, etc.
+  timestamp   DateTime
+  duration    Int?     // in minutes
+  description String?
+  
+  // Risk assessment
+  riskLevel   Int      // 1-10 scale
+  
+  createdAt   DateTime @default(now())
+
+  @@map("after_hours_activity")
+}
+
+model RecoveryScore {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Recovery metrics
+  ptoTaken    Boolean  @default(false)
+  weekendWork Boolean  @default(false)
+  vacationDays Int     @default(0)
+  sickDays    Int      @default(0)
+  
+  // Calculated score
+  score       Int      // 0-100
+  
+  // Time period
+  weekOf      DateTime // Start of the week
+  createdAt   DateTime @default(now())
+
+  @@map("recovery_scores")
+}
+
+model BurnoutRisk {
+  id          String   @id @default(cuid())
+  
+  // Target (team or individual)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  // Risk assessment
+  riskScore   Int      // 0-100
+  riskLevel   RiskLevel
+  factors     String[] // Array of contributing factors
+  
+  // AI insights
+  aiInsights  String?
+  recommendations String[]
+  
+  // Metadata
+  calculatedAt DateTime @default(now())
+  validUntil   DateTime
+  
+  // Ensure either teamId or userId is set, but not both
+  @@unique([teamId, userId, calculatedAt])
+  @@map("burnout_risks")
+}
+
+model SlackIntegration {
+  id          String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  
+  // Slack credentials
+  teamId      String   @unique
+  teamName    String
+  botToken    String
+  botUserId   String
+  botScopes   String[]
+  
+  // Status
+  isActive    Boolean  @default(true)
+  lastSyncAt  DateTime?
+  errorCount  Int      @default(0)
+  lastError   String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("slack_integrations")
+}
+
+model EmailDigest {
+  id          String   @id @default(cuid())
+  
+  // Recipient
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Content
+  subject     String
+  content     String   // HTML content
+  summary     String   // Plain text summary
+  
+  // Status
+  status      EmailStatus @default(PENDING)
+  sentAt      DateTime?
+  openedAt    DateTime?
+  
+  // Metadata
+  weekOf      DateTime // Start of the week this digest covers
+  createdAt   DateTime @default(now())
+
+  @@map("email_digests")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  
+  // Recipient
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  // Content
+  title       String
+  message     String
+  type        NotificationType
+  priority    NotificationPriority @default(MEDIUM)
+  
+  // Status
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  
+  // Action data
+  actionUrl   String?
+  actionText  String?
+  
+  createdAt   DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// Enums
+enum UserRole {
+  EMPLOYEE
+  MANAGER
+  ADMIN
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+  OPENED
+}
+
+enum NotificationType {
+  BURNOUT_ALERT
+  TEAM_INSIGHT
+  SYSTEM_UPDATE
+  INTEGRATION_ERROR
+  WEEKLY_SUMMARY
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+} 

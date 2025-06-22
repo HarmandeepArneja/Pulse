@@ -1,0 +1,26 @@
+{
+  "name": "pulse-slack-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pulse Slack App - Slack Bolt integration",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js",
+    "lint": "eslint . --ext .js",
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.15.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 
